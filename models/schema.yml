@@ -1,0 +1,168 @@
+version: 2
+
+models:
+  - name: stg_accounts
+    columns:
+      - name: account_id
+        tests: [not_null, unique]
+      - name: employee_band
+        tests:
+          - accepted_values:
+              values: ["1-50", "51-200", "201-1000", "1000+"]
+
+  - name: stg_contacts
+    columns:
+      - name: contact_id
+        tests: [not_null, unique]
+      - name: email
+        tests: [not_null, unique]
+
+  - name: stg_web_events
+    columns:
+      - name: event_id
+        tests: [not_null, unique]
+      - name: channel
+        tests:
+          - accepted_values:
+              values: [paid, linkedin, outbound_email, organic, direct, internal]
+
+  - name: stg_activities
+    columns:
+      - name: activity_id
+        tests: [not_null, unique]
+      - name: channel
+        tests:
+          - not_null
+          - accepted_values:
+              values: [sdr_call, webinar, events]
+
+  - name: stg_stage_history
+    columns:
+      - name: stage
+        tests:
+          - accepted_values:
+              values: [lead, mql, sql, opportunity, won]
+      - name: stage_order
+        tests: [not_null]
+
+  - name: int_identity_map
+    columns:
+      - name: anonymous_id
+        tests: [not_null, unique]
+      - name: contact_id
+        tests:
+          - not_null
+          - relationships:
+              to: stg_contacts
+              field: contact_id
+
+  - name: int_sessions
+    columns:
+      - name: session_id
+        tests: [not_null, unique]
+      - name: landing_channel
+        tests:
+          - accepted_values:
+              values: [paid, linkedin, outbound_email, organic, direct]
+    tests:
+      - expression_is_true:
+          expression: "session_end >= session_start and pageviews >= 1"
+
+  - name: int_contact_accounts
+    columns:
+      - name: contact_id
+        tests: [not_null, unique]
+      - name: resolution_method
+        tests:
+          - accepted_values:
+              values: [crm, email_domain, unresolved]
+
+  - name: fct_touchpoints
+    columns:
+      - name: touchpoint_id
+        tests: [not_null, unique]
+      - name: account_id
+        tests:
+          - not_null
+          - relationships:
+              to: stg_accounts
+              field: account_id
+      - name: channel
+        tests:
+          - not_null
+          - accepted_values:
+              values: [outbound_email, linkedin, paid, webinar, organic, sdr_call, events, direct]
+
+  - name: fct_funnel_stages
+    columns:
+      - name: account_id
+        tests: [not_null, unique]
+      - name: lead_at
+        tests: [not_null]
+      - name: current_stage
+        tests:
+          - accepted_values:
+              values: [lead, mql, sql, opportunity, won]
+    tests:
+      - expression_is_true:
+          expression: "mql_at is null or mql_at >= lead_at"
+      - expression_is_true:
+          expression: "won_at is null or (opportunity_at is not null and won_at >= opportunity_at)"
+
+  - name: fct_opportunities
+    columns:
+      - name: opportunity_id
+        tests: [not_null, unique]
+      - name: account_id
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: fct_funnel_stages
+              field: account_id
+      - name: stage_name
+        tests:
+          - accepted_values:
+              values: [open, closed_won, closed_lost]
+    tests:
+      - expression_is_true:
+          expression: "amount > 0"
+      - expression_is_true:
+          expression: "cycle_days is null or cycle_days >= 0"
+
+  - name: fct_account_outcomes
+    columns:
+      - name: account_id
+        tests: [not_null, unique]
+      - name: conversion_at
+        tests: [not_null]
+
+  - name: fct_attribution_paths
+    columns:
+      - name: touchpoint_id
+        tests: [not_null, unique]
+      - name: days_before_conversion
+        tests: [not_null]
+    tests:
+      - expression_is_true:
+          expression: "days_before_conversion >= 0 and days_before_conversion <= {{ var('attribution_window_days') }}"
+
+  - name: mart_funnel_cohorts
+    columns:
+      - name: cohort_month
+        tests: [not_null, unique]
+    tests:
+      - expression_is_true:
+          expression: "wins <= opportunities and opportunities <= sqls and sqls <= mqls and mqls <= leads"
+
+  - name: mart_pipeline_velocity
+    columns:
+      - name: grain
+        tests:
+          - accepted_values:
+              values: [quarter, all_time]
+
+  - name: mart_identity_coverage
+    tests:
+      - expression_is_true:
+          expression: "identified_sessions <= web_sessions and resolved_touchpoints > 0"

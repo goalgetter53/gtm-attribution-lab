@@ -1,0 +1,48 @@
+# POSITIVE CONTROL (synthetic): a world that satisfies the assumptions of path-based
+# attribution. No intent confounding, no ABM correlation, no tracking noise, a single
+# effective transition (opportunity -> won) and uniform touch timing.
+# If a model cannot recover the truth HERE, the implementation is wrong; if it can here
+# but not in default.yaml, the realistic noise is what breaks it.
+seed: 7
+n_accounts: 2000
+cohort_span_days: 270
+journey_days: 240
+data_end_day: 540
+confounding: 0.0
+gt_replicates: 48
+
+channels:
+  outbound_email: {rate: 3.0, timing: [1.0, 1.0], intent_loading: 0.0, abm_loading: 0.0, lift: [0.0, 0.0, 0.0, 0.020]}
+  linkedin:       {rate: 2.0, timing: [1.0, 1.0], intent_loading: 0.0, abm_loading: 0.0, lift: [0.0, 0.0, 0.0, 0.010]}
+  paid:           {rate: 3.5, timing: [1.0, 1.0], intent_loading: 0.0, abm_loading: 0.0, lift: [0.0, 0.0, 0.0, 0.000]}
+  webinar:        {rate: 0.8, timing: [1.0, 1.0], intent_loading: 0.0, abm_loading: 0.0, lift: [0.0, 0.0, 0.0, 0.150]}
+  organic:        {rate: 3.0, timing: [1.0, 1.0], intent_loading: 0.0, abm_loading: 0.0, lift: [0.0, 0.0, 0.0, 0.000]}
+  sdr_call:       {rate: 1.6, timing: [1.0, 1.0], intent_loading: 0.0, abm_loading: 0.0, lift: [0.0, 0.0, 0.0, 0.060]}
+  events:         {rate: 0.6, timing: [1.0, 1.0], intent_loading: 0.0, abm_loading: 0.0, lift: [0.0, 0.0, 0.0, 0.200]}
+
+baseline:
+  rate: 40.0               # dense baseline nudges walk every account to 'opportunity' fast
+  lift: [1.0, 1.0, 1.0, 0.0]
+  intent_effect: 0.0
+  direct_visit_prob: 0.0
+
+noise:
+  missing_utm_rate: 0.0
+  identify_rate: 1.0
+  personal_email_rate: 0.0
+  stage_lag_mean_days: 0.01
+  max_pageviews: 1
+
+committee:
+  min_size: 1
+  mean_extra: 0.0
+  max_size: 1
+  champion_weight: 1.0
+
+attribution:
+  window_days: 365
+  half_life_days: 14
+  markov_order: 2
+  shapley_exact_max_channels: 10
+  shapley_mc_permutations: 2000
+  session_timeout_minutes: 30
